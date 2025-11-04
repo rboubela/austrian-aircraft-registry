@@ -115,6 +115,22 @@ app.layout = dbc.Container([
         ], md=4),
     ]),
 
+    dbc.Row([
+        dbc.Col([
+            html.Label("Filter by Manufacturer (Hersteller):", className="fw-bold"),
+            html.Div([
+                dcc.Dropdown(
+                    id='manufacturer-filter',
+                    options=[],
+                    value=None,
+                    multi=True,
+                    placeholder="Select one or more manufacturers (or leave empty for all)",
+                    className="mb-3"
+                )
+            ])
+        ], md=12),
+    ]),
+
     html.Hr(),
 
     dbc.Row([
@@ -149,15 +165,42 @@ app.layout = dbc.Container([
 
 
 @callback(
+    Output('manufacturer-filter', 'options'),
+    Input('sheet-selector', 'value')
+)
+def update_manufacturer_options(selected_sheet):
+    """Update manufacturer dropdown options based on selected sheet"""
+    df = load_sheet_data(selected_sheet)
+
+    if df.empty or 'Hersteller' not in df.columns:
+        return []
+
+    # Get unique manufacturers and sort them
+    manufacturers = sorted(df['Hersteller'].dropna().unique())
+
+    # Create options with manufacturer name and count
+    options = []
+    for manufacturer in manufacturers:
+        count = len(df[df['Hersteller'] == manufacturer])
+        options.append({
+            'label': f'{manufacturer} ({count} aircraft)',
+            'value': manufacturer
+        })
+
+    return options
+
+
+@callback(
     Output('bar-chart', 'figure'),
     Output('density-plot', 'figure'),
     Output('data-summary', 'children'),
     Output('data-table', 'children'),
     Input('sheet-selector', 'value'),
     Input('group-by-selector', 'value'),
-    Input('top-n-slider', 'value')
+    Input('top-n-slider', 'value'),
+    Input('manufacturer-filter', 'value')
 )
-def update_dashboard(selected_sheet, group_by, top_n):
+def update_dashboard(selected_sheet, group_by, top_n, selected_manufacturers):
     """Update all dashboard components based on selections"""
 
     # Load data
@@ -167,6 +210,15 @@ def update_dashboard(selected_sheet, group_by, top_n):
         empty_fig = go.Figure()
         empty_fig.add_annotation(text="No data available", showarrow=False)
         return empty_fig, empty_fig, "No data available", ""
+
+    # Apply manufacturer filter if selected
+    if selected_manufacturers and len(selected_manufacturers) > 0 and 'Hersteller' in df.columns:
+        df = df[df['Hersteller'].isin(selected_manufacturers)]
+
+        if df.empty:
+            empty_fig = go.Figure()
+            empty_fig.add_annotation(text="No data available for selected manufacturer(s)", showarrow=False)
+            return empty_fig, empty_fig, "No data available for selected manufacturer(s)", ""
 
     # Prepare grouping
     if group_by == 'both':
