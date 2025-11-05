@@ -233,11 +233,16 @@ def update_dashboard(selected_sheet, group_by, top_n, selected_manufacturers):
 
     # Create bar chart
     group_counts = df[group_col].value_counts().head(top_n)
+    bar_data = pd.DataFrame({
+        'Group': group_counts.index,
+        'Count': group_counts.values
+    })
     bar_fig = px.bar(
-        x=group_counts.values,
-        y=group_counts.index,
+        bar_data,
+        x='Count',
+        y='Group',
         orientation='h',
-        labels={'x': 'Count', 'y': group_col},
+        labels={'Count': 'Count', 'Group': group_col},
         title=f'Top {top_n} {group_col} by Aircraft Count'
     )
     bar_fig.update_layout(
