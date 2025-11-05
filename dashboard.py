@@ -253,7 +253,7 @@ def update_dashboard(selected_sheet, group_by, top_n, selected_manufacturers):
     if mass_col in df.columns:
         mass_data = df[mass_col].dropna()
 
-        if len(mass_data) > 0:
+        if len(mass_data) >= 2:
             density_fig = go.Figure()
 
             # Add histogram
